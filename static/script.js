@@ -28,13 +28,44 @@ if (toggleButton) {
 
 initTheme();
 
-// --- Screen switching (single page, so a future WebSocket stays open) ---
-const screens = document.querySelectorAll('.screen');
+// --- Screen switching (each screen is one div; page never reloads) ---
+const screenEl = document.getElementById('screen');
+
+const screens = {
+	menu: `
+		<div class="box">
+			<h2>Title</h2>
+			<hr class="divider">
+			<button type="button" data-goto="local">On this device</button>
+			<button type="button" data-goto="online">On two different devices</button>
+		</div>`,
+	local: `
+		<div class="box">
+			<h2>On this device</h2>
+			<hr class="divider">
+			<button type="button" data-goto="game">Start game</button>
+			<button type="button" data-goto="menu">Back</button>
+		</div>`,
+	online: `
+		<div class="box">
+			<h2>On two different devices</h2>
+			<hr class="divider">
+			<p id="online-status">Online game goes here.</p>
+			<button type="button" data-goto="game">Start game</button>
+			<button type="button" data-goto="menu">Back</button>
+		</div>`,
+	game: `
+		<div class="box">
+			<h2>Game</h2>
+			<hr class="divider" id="game-divider">
+			<div id="game-holder"></div>
+			<button type="button" data-goto="menu">Quit to menu</button>
+		</div>`,
+};
 
 function showScreen(name) {
-	screens.forEach((screen) => {
-		screen.hidden = screen.dataset.screen !== name;
-	});
+	if (!screens[name]) return;
+	screenEl.innerHTML = screens[name];
 	// Hook for later: open the WebSocket when entering 'online',
 	// close it when leaving.
 }
@@ -45,3 +76,5 @@ document.addEventListener('click', (event) => {
 		showScreen(target.dataset.goto);
 	}
 });
+
+showScreen('menu');
