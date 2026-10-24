@@ -224,7 +224,9 @@ button:active,
     height: 40vh;
     width: 60vw;
     align-self: center;
-    display: block;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
     background-color: var(--button-bg);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -233,4 +235,36 @@ button:active,
 
 #game-divider {
     width: 60vw;
+}
+
+.player {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.player h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.hand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.bullets {
+    font-weight: 600;
+}
+
+.vdivider {
+    width: 1px;
+    align-self: stretch;
+    background-color: var(--border);
 }
