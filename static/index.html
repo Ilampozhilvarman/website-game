@@ -23,13 +23,26 @@
 	</header>
 	<hr class="divider">
 	<main>
-		<div id="box">
+		<div class="box screen" id="screen-menu" data-screen="menu">
 			<h2>Title</h2>
 			<hr class="divider">
 			<div id="row">
-				<button>On this device</button>
-				<button>On two different devices</button>
+				<button type="button" data-goto="local">On this device</button>
+				<button type="button" data-goto="online">On two different devices</button>
 			</div>
+		</div>
+	<div class="box screen" id="screen-local" data-screen="local" hidden>
+			<h2>On this device</h2>
+			<hr class="divider">
+			<p>Local game goes here.</p>
+			<button type="button" data-goto="menu">Back</button>
+		</div>
+
+		<div class="box screen" id="screen-online" data-screen="online" hidden>
+			<h2>On two different devices</h2>
+			<hr class="divider">
+			<p id="online-status">Online game goes here.</p>
+			<button type="button" data-goto="menu">Back</button>
 		</div>
 	</main>
 	<button id="toggle" type="button" aria-label="Toggle dark mode" aria-pressed="false" title="Toggle dark mode">

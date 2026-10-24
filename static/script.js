@@ -27,3 +27,21 @@ if (toggleButton) {
 }
 
 initTheme();
+
+// --- Screen switching (single page, so a future WebSocket stays open) ---
+const screens = document.querySelectorAll('.screen');
+
+function showScreen(name) {
+	screens.forEach((screen) => {
+		screen.hidden = screen.dataset.screen !== name;
+	});
+	// Hook for later: open the WebSocket when entering 'online',
+	// close it when leaving.
+}
+
+document.addEventListener('click', (event) => {
+	const target = event.target.closest('[data-goto]');
+	if (target) {
+		showScreen(target.dataset.goto);
+	}
+});
