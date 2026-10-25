@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).parent / "static"
 app = FastAPI()
 
 MAX_AMMO = 3
