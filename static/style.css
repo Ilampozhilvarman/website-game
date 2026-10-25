@@ -36,7 +36,9 @@ html, body {
 
 body {
     width: 100vw;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -48,13 +50,13 @@ body {
 }
 
 header {
-    padding: 2rem 0 1rem;
+    padding: 1rem 0 0.5rem;
     width: 100%;
 }
 
 header h1 {
     margin: 0;
-    font-size: 2.5rem;
+    font-size: 2rem;
     letter-spacing: 0.02em;
 }
 
@@ -63,7 +65,9 @@ main {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1rem 0 4rem;
+    padding: 0.5rem 0 1rem;
+    flex: 1;
+    min-height: 0;
 }
 
 .divider {
@@ -80,11 +84,12 @@ main {
     align-items: center;
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 2rem 2.5rem;
+    padding: 1rem 2.5rem;
+    max-height: 100%;
     width: fit-content;
     min-width: 60vw;
     max-width: 90vw;
-    gap: 1.25rem;
+    gap: 0.75rem;
     box-shadow: 0 10px 30px var(--shadow);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
     overflow: visible;
@@ -99,6 +104,8 @@ main {
 
 #screen {
     width: 100%;
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -195,7 +202,7 @@ button:active,
     }
 
     .box {
-        padding: 1.5rem;
+        padding: 1rem;
         width: fit-content;
         min-width: 90vw;
         max-width: 95vw;
@@ -221,7 +228,9 @@ button:active,
 }
 
 #game-holder {
-    height: 40vh;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
     width: 60vw;
     align-self: center;
     display: flex;
@@ -243,8 +252,8 @@ button:active,
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
-    padding: 1rem;
+    gap: 0.5rem;
+    padding: 0.5rem;
 }
 
 .player h3 {
@@ -269,4 +278,104 @@ button:active,
     width: 1px;
     align-self: stretch;
     background-color: var(--border);
+}
+
+.keys {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.3rem;
+    margin-top: 0.4rem;
+}
+
+.key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.15rem 0.4rem;
+    pointer-events: none;
+    user-select: none;
+    cursor: default;
+}
+
+kbd {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0 0.3rem;
+}
+
+#game-status {
+    min-height: 2.4em;
+}
+
+.actions {
+    display: flex;
+    flex-direction: row;
+    gap: 0.75rem;
+}
+
+.actions button {
+    min-width: 0;
+    padding: 0.6rem 1.2rem;
+}
+
+.help-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 10;
+}
+
+.help-overlay[hidden] {
+    display: none;
+}
+
+.help-card {
+    background-color: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    width: min(560px, 92vw);
+    max-height: 92vh;
+    overflow-y: auto;
+    text-align: left;
+    font-size: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.help-card h3 {
+    margin: 0;
+    text-align: center;
+}
+
+.help-card ul {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+
+.help-card li {
+    margin: 0.3rem 0;
+}
+
+.help-card button {
+    align-self: center;
+    min-width: 0;
+    padding: 0.5rem 1.5rem;
+}
+
+@media (max-width: 640px) {
+    main {
+        padding-bottom: 4rem;
+    }
 }
