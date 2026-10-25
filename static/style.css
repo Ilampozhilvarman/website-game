@@ -260,7 +260,9 @@ button:active,
 }
 
 .bullets {
-    font-weight: 600;
+    min-height: 1.5em;
+    letter-spacing: 0.15em;
+    overflow-wrap: anywhere;
 }
 
 .vdivider {
