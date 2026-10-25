@@ -58,15 +58,23 @@ const screens = {
 		<div class="box">
 			<h2>Game</h2>
 			<hr class="divider" id="game-divider">
+			<div id="hud">
+				<span id="turn-label">Turn 1</span>
+				<div id="timer-track"><div id="timer-fill"></div></div>
+				<span id="timer-text"></span>
+			</div>
 			<div id="game-holder">
+				<div id="banner"></div>
 				<div class="player" id="player1">
 					<h3>Player 1</h3>
+					<span class="ready" id="p1-ready"></span>
 					<div class="hand">Left hand<span class="bullets" id="p1-left"></span><span class="keys" id="p1-left-keys"></span></div>
 					<div class="hand">Right hand<span class="bullets" id="p1-right"></span><span class="keys" id="p1-right-keys"></span></div>
 				</div>
 				<div class="vdivider"></div>
 				<div class="player" id="player2">
 					<h3>Player 2</h3>
+					<span class="ready" id="p2-ready"></span>
 					<div class="hand">Left hand<span class="bullets" id="p2-left"></span><span class="keys" id="p2-left-keys"></span></div>
 					<div class="hand">Right hand<span class="bullets" id="p2-right"></span><span class="keys" id="p2-right-keys"></span></div>
 				</div>
@@ -84,12 +92,14 @@ const screens = {
 					<li><b>Shoot</b> needs ammo (1 in that hand; a double Shoot needs 3 in each hand). <b>Reload</b> adds 1 ammo (max 3).</li>
 					<li><b>Shield</b> blocks a Shoot, but only every other turn. <b>Mirror</b> reflects a Shoot back at the shooter.</li>
 					<li>A double Shoot beats a single Shield and Mirror. Only a double Shield stops it.</li>
-					<li>If both players Shoot, the shots cancel. Get shot and you lose.</li>
+					<li>Local games are timed: you get 10 seconds per turn. If time runs out you make no move that turn, which leaves you open to a Shoot.</li>
+						<li>If both players Shoot, the shots cancel. Get shot and you lose.</li>
 				</ul>
 					<button type="button" id="help-close">Close</button>
 				</div>
 			</div>
 			<div class="actions">
+				<button type="button" id="play-again" data-goto="game" hidden>Play again</button>
 				<button type="button" id="help-open">How to play</button>
 				<button type="button" data-goto="menu">Quit to menu</button>
 			</div>
@@ -118,6 +128,16 @@ let turn = { p1: null, p2: null };
 let revealing = false;
 let revealTimer = null;
 let gameOver = false;
+let gameMode = 'local'; // set from the screen the game was started from
+let turnNumber = 0;
+const TURN_SECONDS = 10;
+let timerId = null;
+let turnEndsAt = 0;
+let lastSecond = TURN_SECONDS;
+let pausedLeft = null; // ms left on the clock while the help pop-up is open
+let countdownTimer = null;
+let bannerTimer = null;
+let audioCtx = null;
 const shieldedLastTurn = { p1: false, p2: false }; // Shield is usable once every two turns
 const MAX_AMMO = 3;
 
@@ -126,17 +146,165 @@ function setStatus(text) {
 	if (el) el.textContent = text;
 }
 
+// Tiny beep for ticks, lock-ins and turn starts. Silently does nothing if audio isn't available.
+function beep(freq = 660, dur = 0.08) {
+	try {
+		audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+		const osc = audioCtx.createOscillator();
+		const gain = audioCtx.createGain();
+		osc.frequency.value = freq;
+		gain.gain.value = 0.04;
+		osc.connect(gain);
+		gain.connect(audioCtx.destination);
+		osc.start();
+		osc.stop(audioCtx.currentTime + dur);
+	} catch (e) {
+		// ignore
+	}
+}
+
+function showBanner(text, ms) {
+	const el = document.getElementById('banner');
+	if (!el) return;
+	clearTimeout(bannerTimer);
+	el.textContent = text;
+	el.classList.remove('show');
+	void el.offsetWidth; // restart the pop animation
+	el.classList.add('show');
+	if (ms > 0) bannerTimer = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+function setReady(player, text) {
+	const el = document.getElementById(`${player}-ready`);
+	if (!el) return;
+	el.textContent = text;
+	el.classList.toggle('locked', text !== 'Choosing...');
+}
+
+function updateHud() {
+	const label = document.getElementById('turn-label');
+	if (label) label.textContent = `Turn ${Math.max(1, turnNumber)}`;
+	const hud = document.getElementById('hud');
+	if (hud) hud.classList.toggle('no-timer', gameMode !== 'local');
+}
+
+function markWinner(winner) {
+	for (const p of ['p1', 'p2']) {
+		const el = document.getElementById(p === 'p1' ? 'player1' : 'player2');
+		if (el) el.classList.add(p === winner ? 'winner' : 'loser');
+	}
+}
+
+function clearWinnerMarks() {
+	for (const id of ['player1', 'player2']) {
+		const el = document.getElementById(id);
+		if (el) el.classList.remove('winner', 'loser');
+	}
+}
+
+function drawTimer(msLeft) {
+	const fill = document.getElementById('timer-fill');
+	const text = document.getElementById('timer-text');
+	const hud = document.getElementById('hud');
+	const secs = Math.ceil(msLeft / 1000);
+	if (fill) fill.style.width = `${(msLeft / (TURN_SECONDS * 1000)) * 100}%`;
+	if (text) text.textContent = secs;
+	if (hud) hud.classList.toggle('urgent', msLeft > 0 && msLeft <= 3000);
+	return secs;
+}
+
+function stopTimer() {
+	clearInterval(timerId);
+	timerId = null;
+}
+
+function startTurnTimer(ms = TURN_SECONDS * 1000) {
+	stopTimer();
+	pausedLeft = null;
+	turnEndsAt = Date.now() + ms;
+	lastSecond = drawTimer(ms);
+	timerId = setInterval(() => {
+		const left = Math.max(0, turnEndsAt - Date.now());
+		const secs = drawTimer(left);
+		if (secs !== lastSecond) {
+			lastSecond = secs;
+			if (secs > 0 && secs <= 3) beep(660, 0.08);
+		}
+		if (left === 0) timeUp();
+	}, 100);
+}
+
+// The clock stops while the "How to play" pop-up is open.
+function pauseTimer() {
+	if (!timerId) return;
+	pausedLeft = Math.max(0, turnEndsAt - Date.now());
+	stopTimer();
+}
+
+function resumeTimer() {
+	if (pausedLeft === null) return;
+	const left = pausedLeft;
+	pausedLeft = null;
+	if (!revealing && !gameOver) startTurnTimer(left);
+}
+
+// Anyone who hasn't picked a move when time runs out makes no move this turn.
+function timeUp() {
+	stopTimer();
+	for (const p of ['p1', 'p2']) {
+		if (!turn[p]) turn[p] = { action: 'idle', hand: 'none' };
+	}
+	revealMoves();
+}
+
+// 3... 2... 1... before the first turn. Input is blocked meanwhile.
+function startCountdown(done) {
+	revealing = true;
+	updateHud();
+	setStatus('Get ready...');
+	let n = 3;
+	const step = () => {
+		if (n === 0) {
+			done();
+			return;
+		}
+		showBanner(String(n), 800);
+		beep(440, 0.12);
+		n--;
+		countdownTimer = setTimeout(step, 800);
+	};
+	step();
+}
+
 function resetTurn() {
 	turn = { p1: null, p2: null };
 	revealing = false;
-	setStatus('Waiting for both players...');
+	turnNumber++;
+	clearWinnerMarks();
+	setReady('p1', 'Choosing...');
+	setReady('p2', 'Choosing...');
+	updateHud();
+	if (gameMode === 'local') {
+		setStatus('Choose your move!');
+		showBanner(turnNumber === 1 ? 'GO!' : `Turn ${turnNumber}`, 700);
+		beep(880, 0.1);
+		if (isHelpOpen()) pausedLeft = TURN_SECONDS * 1000;
+		else startTurnTimer();
+	} else {
+		setStatus('Waiting for both players...');
+	}
 }
 
 function showScreen(name) {
 	if (!screens[name]) return;
 	screenEl.innerHTML = screens[name];
+	if (name === 'game' && (currentScreen === 'local' || currentScreen === 'online')) gameMode = currentScreen;
 	currentScreen = name;
 	clearTimeout(revealTimer);
+	clearTimeout(countdownTimer);
+	clearTimeout(bannerTimer);
+	stopTimer();
+	pausedLeft = null;
 	if (name === 'game') {
 		for (const p of ['p1', 'p2']) {
 			bullets[p].left = 0;
@@ -144,7 +312,9 @@ function showScreen(name) {
 			shieldedLastTurn[p] = false;
 		}
 		gameOver = false;
-		resetTurn();
+		turnNumber = 0;
+		if (gameMode === 'local') startCountdown(resetTurn);
+		else resetTurn();
 		renderBullets();
 		renderKeyLegend();
 	}
@@ -201,21 +371,25 @@ function isHelpOpen() {
 	return !!help && !help.hidden;
 }
 
-document.addEventListener('click', (event) => {
+function setHelp(open) {
 	const help = document.getElementById('help');
-	if (!help) return;
-	if (event.target.closest('#help-open')) help.hidden = false;
-	else if (event.target.closest('#help-close') || event.target === help) help.hidden = true;
+	if (!help || help.hidden === !open) return;
+	help.hidden = !open;
+	if (open) pauseTimer();
+	else resumeTimer();
+}
+
+document.addEventListener('click', (event) => {
+	if (event.target.closest('#help-open')) setHelp(true);
+	else if (event.target.closest('#help-close') || event.target.id === 'help') setHelp(false);
 });
 
 document.addEventListener('keydown', (event) => {
-	if (event.key === 'Escape') {
-		const help = document.getElementById('help');
-		if (help) help.hidden = true;
-	}
+	if (event.key === 'Escape') setHelp(false);
 });
 
 function describeMove(move) {
+	if (move.action === 'idle') return 'No move';
 	const name = move.action.charAt(0).toUpperCase() + move.action.slice(1);
 	return move.hand === 'both' ? `Double ${name}` : `${name} (${move.hand} hand)`;
 }
@@ -254,6 +428,7 @@ function applyMoves() {
 }
 
 function revealMoves() {
+	stopTimer();
 	revealing = true;
 	let text = `Player 1: ${describeMove(turn.p1)} | Player 2: ${describeMove(turn.p2)}`;
 	let winner = null;
@@ -267,8 +442,15 @@ function revealMoves() {
 	}
 	applyMoves();
 	renderBullets();
+	setReady('p1', describeMove(turn.p1));
+	setReady('p2', describeMove(turn.p2));
 	if (winner) {
 		gameOver = true;
+		markWinner(winner);
+		showBanner(`Player ${winner[1]} wins!`, 2500);
+		beep(330, 0.3);
+		const again = document.getElementById('play-again');
+		if (again) again.hidden = false;
 		setStatus(`${text} | Player ${winner[1]} wins!`);
 		return;
 	}
@@ -298,6 +480,8 @@ document.addEventListener('keydown', (event) => {
 		return;
 	}
 	turn[bind.player] = move;
+	setReady(bind.player, 'READY'); // doesn't reveal the move
+	beep(520, 0.06);
 
 	if (turn.p1 && turn.p2) {
 		revealMoves();
