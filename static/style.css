@@ -390,7 +390,7 @@ kbd {
 }
 
 #turn-label {
-    min-width: 5.5em;
+    min-width: 8em;
     text-align: left;
 }
 
@@ -503,4 +503,55 @@ kbd {
     #hud {
         width: 90vw;
     }
+}
+
+input {
+    background-color: var(--button-bg);
+    color: var(--button-fg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.9rem 1.6rem;
+    width: 220px;
+    font: inherit;
+    font-size: 1rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+}
+
+#online-status {
+    min-height: 2.4em;
+}
+
+@media (max-width: 640px) {
+    input {
+        width: 100%;
+    }
+}
+
+.result {
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.15rem 0.7rem;
+    min-height: 1.6em;
+}
+
+.result:empty {
+    visibility: hidden;
+}
+
+.result.good {
+    border-width: 2px;
+}
+
+.result.bad {
+    border-width: 2px;
+    border-style: dashed;
+    text-decoration: underline;
+}
+
+.result.neutral {
+    opacity: 0.8;
 }
